@@ -8,7 +8,7 @@ import Navbar from '@/components/Navbar'
 import Lenis from 'lenis';
 import React, { useEffect } from 'react';
 
-const Page = () => {
+const Home = () => {
 
   useEffect(() => {
     const lenis = new Lenis();
@@ -35,4 +35,4 @@ const Page = () => {
   )
 }
 
-export default page
+export default Home
