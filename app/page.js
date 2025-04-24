@@ -6,9 +6,9 @@ import Footer from '@/components/Footer';
 import Hero from '@/components/Hero'
 import Navbar from '@/components/Navbar'
 import Lenis from 'lenis';
-import React, { useEffect } from 'react'
+import React, { useEffect } from 'react';
 
-const page = () => {
+const Page = () => {
 
   useEffect(() => {
     const lenis = new Lenis();
