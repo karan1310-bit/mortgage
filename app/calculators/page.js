@@ -1,6 +1,6 @@
 'use client'
 
-import MortgagePayCalc from "@/components/MortCalculator";
+import MortgagePayCalc from "@/components/mortgage/MortgagePayCalc";
 import Lenis from "lenis";
 import { useEffect } from "react";
 
@@ -18,7 +18,7 @@ const page = () => {
     
       return (
         
-        <main className="bg-[#e6e1da] text-[#000000] font-Satoshi">
+        <main className="min-h-screen w-full bg-[#e6e1da] text-[#000000] font-Satoshi">
             <MortgagePayCalc />
         </main>
   )
