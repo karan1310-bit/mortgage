@@ -1,200 +1,176 @@
-'use client';
+// MortgagePayCalc.jsx – Final Version ✅
+import React, { useState, useEffect } from 'react';
+import { Line, Doughnut } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+} from 'chart.js';
 
-import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { motion } from 'framer-motion';
-import jsPDF from 'jspdf';
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement
+);
 
-const COLORS = ['#3a3a3a', '#9ca3af'];
+const MortgagePayCalc = () => {
+  const [askingPrice, setAskingPrice] = useState(500000);
+  const [downPaymentAmount, setDownPaymentAmount] = useState(100000);
+  const [downPaymentPercent, setDownPaymentPercent] = useState(20);
+  const [mortgageRate, setMortgageRate] = useState(5.59);
+  const [mortgageTerm, setMortgageTerm] = useState(3);
+  const [amortizationPeriod, setAmortizationPeriod] = useState(25);
+  const [paymentFrequency, setPaymentFrequency] = useState(1);
 
-export default function MortgageCalculator() {
-  const [hasMounted, setHasMounted] = useState(false);
-  const [amount, setAmount] = useState(500000);
-  const [rate, setRate] = useState(5.25);
-  const [amortYears, setAmortYears] = useState(25);
-  const [termYears, setTermYears] = useState(5);
-  const [payment, setPayment] = useState(0);
-  const [totalInterest, setTotalInterest] = useState(0);
-  const [balanceEndOfTerm, setBalanceEndOfTerm] = useState(0);
+  const [monthlyPayment, setMonthlyPayment] = useState(0);
+  const [biweeklyPayment, setBiweeklyPayment] = useState(0);
+  const [weeklyPayment, setWeeklyPayment] = useState(0);
+  const [totalMortgageAmount, setTotalMortgageAmount] = useState(0);
+  const [principalPaid, setPrincipalPaid] = useState(0);
+  const [interestPaid, setInterestPaid] = useState(0);
+  const [remainingBalance, setRemainingBalance] = useState(0);
+  const [lineChartData, setLineChartData] = useState({ labels: [], datasets: [] });
+  const [pieChartData, setPieChartData] = useState({ labels: [], datasets: [] });
+
+  const formatNumber = (num) => num.toLocaleString();
 
   useEffect(() => {
-    setHasMounted(true);
-  }, []);
+    const loanAmount = askingPrice - downPaymentAmount;
+    setTotalMortgageAmount(loanAmount);
 
-  useEffect(() => {
-    const P = amount;
-    const r = rate / 100 / 12;
-    const n = amortYears * 12;
-    const monthly = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
-    const total = monthly * n;
-    setPayment(monthly);
-    setTotalInterest(total - P);
+    const monthlyInterestRate = mortgageRate / 100 / 12;
+    const months = amortizationPeriod * 12;
+    const monthly = (loanAmount * monthlyInterestRate * Math.pow(1 + monthlyInterestRate, months)) / (Math.pow(1 + monthlyInterestRate, months) - 1);
 
-    const termN = termYears * 12;
-    const balance =
-      P * Math.pow(1 + r, termN) -
-      (Math.pow(1 + r, termN) - 1) * (monthly / r);
-    setBalanceEndOfTerm(balance);
-  }, [amount, rate, amortYears, termYears]);
+    setMonthlyPayment(Math.round(monthly));
+    setBiweeklyPayment(Math.round((monthly * 12) / 26));
+    setWeeklyPayment(Math.round((monthly * 12) / 52));
 
-  const handleDownload = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('Mortgage Report', 20, 20);
-    doc.setFontSize(12);
-    doc.text(`Mortgage Amount: $${amount.toLocaleString()}`, 20, 40);
-    doc.text(`Interest Rate: ${rate}%`, 20, 50);
-    doc.text(`Amortization Period: ${amortYears} Years`, 20, 60);
-    doc.text(`Term: ${termYears} Years`, 20, 70);
-    doc.text(`Monthly Payment: $${payment.toFixed(2)}`, 20, 80);
-    doc.text(`Total Interest: $${totalInterest.toFixed(2)}`, 20, 90);
-    doc.text(`Balance at End of Term: $${balanceEndOfTerm.toFixed(2)}`, 20, 100);
-    doc.save('mortgage-report.pdf');
-  };
+    const totalPayments = months;
+    let balance = loanAmount;
+    let paidPrincipal = 0;
+    let paidInterest = 0;
 
-  if (!hasMounted) return null;
+    const yearlyLabels = [];
+    const yearlyBalances = [];
 
-  const pieData = [
-    { name: 'Principal', value: amount },
-    { name: 'Interest', value: totalInterest },
-  ];
+    for (let i = 1; i <= totalPayments; i++) {
+      const interest = balance * monthlyInterestRate;
+      const principal = monthly - interest;
+      balance -= principal;
+      paidPrincipal += principal;
+      paidInterest += interest;
+
+      if (i % 12 === 0 || i === totalPayments) {
+        yearlyLabels.push(`Year ${Math.floor(i / 12)}`);
+        yearlyBalances.push(Math.max(0, Math.round(balance)));
+      }
+    }
+
+    setPrincipalPaid(Math.round(paidPrincipal));
+    setInterestPaid(Math.round(paidInterest));
+    setRemainingBalance(Math.round(balance));
+
+    setLineChartData({
+      labels: yearlyLabels,
+      datasets: [
+        {
+          label: 'Balance Remaining',
+          data: yearlyBalances,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(59, 130, 246, 0.15)',
+          tension: 0.3,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+        },
+      ],
+    });
+
+    setPieChartData({
+      labels: ['Interest/Principal', 'Remaining Balance'],
+      datasets: [
+        {
+          label: 'Mortgage Split',
+          data: [Math.round(paidPrincipal + paidInterest), Math.round(balance)],
+          backgroundColor: ['#94a3b8', '#2563eb'],
+          borderWidth: 1,
+        },
+      ],
+    });
+  }, [askingPrice, downPaymentAmount, mortgageRate, amortizationPeriod, mortgageTerm]);
 
   return (
-    <div className="min-h-screen p-6 md:pt-12 font-satoshi bg-[#e6e1da] text-[#3a3a3a]">
-      <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10">
-        {/* Left - Inputs */}
-        <motion.div 
-          initial={{ opacity: 0, y: 30 }} 
-          animate={{ opacity: 1, y: 0 }} 
-          transition={{ duration: 0.5 }}
-          className="space-y-8"
-        >
-          <div>
-            <h1 className="text-3xl font-bold mb-4">Mortgage Payment Calculator</h1>
-          </div>
+    <div className="max-w-6xl mx-auto bg-white p-10 rounded-2xl shadow-lg space-y-10">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-blue-700">Mortgage Payment Calculator</h1>
+        <p className="text-gray-500 mt-2">Find a home that fits within your desired price range</p>
+      </div>
 
-          {/* Mortgage Amount */}
+      <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="block text-lg font-semibold mb-2">Mortgage Amount</label>
-            <input
-              type="range"
-              min={50000}
-              max={2000000}
-              step={1000}
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              className="w-full accent-[#3a3a3a]"
-            />
-            <p className="mt-2 font-medium">${amount.toLocaleString()}</p>
+            <label className="block text-sm font-medium">Down Payment ($)</label>
+            <input type="number" value={downPaymentAmount} onChange={(e) => setDownPaymentAmount(Number(e.target.value))} className="w-full rounded-xl border px-4 py-2" />
           </div>
-
-          {/* Interest Rate */}
           <div>
-            <label className="block text-lg font-semibold mb-2">Interest Rate (%)</label>
-            <input
-              type="range"
-              min={0.5}
-              max={10}
-              step={0.1}
-              value={rate}
-              onChange={(e) => setRate(Number(e.target.value))}
-              className="w-full accent-[#3a3a3a]"
-            />
-            <p className="mt-2 font-medium">{rate}%</p>
+            <label className="block text-sm font-medium">Down Payment (%)</label>
+            <input type="number" value={downPaymentPercent} onChange={(e) => setDownPaymentPercent(Number(e.target.value))} className="w-full rounded-xl border px-4 py-2" />
           </div>
-
-          {/* Amortization Period */}
           <div>
-            <label className="block text-lg font-semibold mb-2">Amortization Period (Years)</label>
-            <input
-              type="range"
-              min={5}
-              max={35}
-              step={1}
-              value={amortYears}
-              onChange={(e) => setAmortYears(Number(e.target.value))}
-              className="w-full accent-[#3a3a3a]"
-            />
-            <p className="mt-2 font-medium">{amortYears} years</p>
+            <label className="block text-sm font-medium">Mortgage Rate (%)</label>
+            <input type="number" value={mortgageRate} onChange={(e) => setMortgageRate(Number(e.target.value))} className="w-full rounded-xl border px-4 py-2" />
           </div>
-
-          {/* Rate Term */}
           <div>
-            <label className="block text-lg font-semibold mb-2">Rate Term (Years)</label>
-            <select
-              value={termYears}
-              onChange={(e) => setTermYears(Number(e.target.value))}
-              className="w-full p-2 rounded-lg border-2 border-[#3a3a3a] bg-white"
-            >
-              {[1, 2, 3, 4, 5].map((year) => (
-                <option key={year} value={year}>{year} Year</option>
-              ))}
+            <label className="block text-sm font-medium">Amortization Period</label>
+            <select value={amortizationPeriod} onChange={(e) => setAmortizationPeriod(Number(e.target.value))} className="w-full rounded-xl border px-4 py-2">
+              {[...Array(26)].map((_, i) => <option key={i} value={i + 5}>{i + 5} years</option>)}
             </select>
           </div>
-
-          {/* Download Button */}
-          <button
-            onClick={handleDownload}
-            className="w-full mt-6 py-3 bg-[#3a3a3a] text-white font-semibold rounded-lg hover:bg-black transition"
-          >
-            Download Report
-          </button>
-        </motion.div>
-
-        {/* Right - Results */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white rounded-3xl shadow-2xl p-8 flex flex-col justify-between"
-        >
           <div>
-            <h2 className="text-2xl font-bold mb-6">Mortgage Summary</h2>
-            <div className="space-y-4 text-xl md:text-3xl text-[#3a3a3a]">
-              <div><strong>Monthly Payment:</strong> ${payment.toFixed(0)}</div>
-              <div><strong>Total Interest:</strong> ${totalInterest.toFixed(0)}</div>
-              <div><strong>Balance at Term:</strong> ${balanceEndOfTerm.toFixed(0)}</div>
-              <div><strong>Amortization:</strong> {amortYears} Years</div>
-            </div>
+            <label className="block text-sm font-medium">Mortgage Term</label>
+            <select value={mortgageTerm} onChange={(e) => setMortgageTerm(Number(e.target.value))} className="w-full rounded-xl border px-4 py-2">
+              {[1, 2, 3, 4, 5].map((year) => <option key={year} value={year}>{year} Year</option>)}
+            </select>
           </div>
-
-          {/* Pie Chart */}
-          <div className="h-64 mt-10">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-
-              <div className="flex justify-center gap-6">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#3a3a3a] rounded-full"></div>
-                <span className="text-sm text-[#3a3a3a]">Principal</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#9ca3af] rounded-full"></div>
-                <span className="text-sm text-[#3a3a3a]">Interest</span>
-              </div>
-            </div>
-            </ResponsiveContainer>
-
-            {/* Pie Chart Legend */}
-            
+          <div>
+            <label className="block text-sm font-medium">Payment Frequency</label>
+            <select value={paymentFrequency} onChange={(e) => setPaymentFrequency(Number(e.target.value))} className="w-full rounded-xl border px-4 py-2">
+              <option value={1}>Monthly</option>
+              <option value={2}>Bi-Weekly</option>
+              <option value={4}>Weekly</option>
+            </select>
           </div>
-        </motion.div>
+        </div>
+
+        <div className="bg-blue-50 p-6 rounded-xl shadow text-sm space-y-3">
+          <h2 className="text-xl font-semibold text-blue-800">Mortgage Summary</h2>
+          <p><strong>Principal Paid:</strong> ${formatNumber(principalPaid)}</p>
+          <p><strong>Interest Paid:</strong> ${formatNumber(interestPaid)}</p>
+          <p><strong>Total Paid:</strong> ${formatNumber(principalPaid + interestPaid)}</p>
+          <p><strong>Remaining Balance:</strong> ${formatNumber(remainingBalance)}</p>
+          <div className="w-[180px] h-[180px] mx-auto">
+            <Doughnut data={pieChartData} />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl p-6 shadow">
+        <h3 className="text-lg font-semibold mb-4 text-blue-700">Balance Remaining Over Time</h3>
+        <Line data={lineChartData} options={{ responsive: true, plugins: { legend: { display: false } } }} height={300} />
       </div>
     </div>
   );
-}
+};
+
+export default MortgagePayCalc;

@@ -1,8 +1,6 @@
 'use client'
 
-import MortCalculator from "@/components/MortCalculator";
-import PurchaseCalculator from "@/components/PurchaseCalculator";
-
+import MortgagePayCalc from "@/components/MortCalculator";
 import Lenis from "lenis";
 import { useEffect } from "react";
 
@@ -21,8 +19,7 @@ const page = () => {
       return (
         
         <main className="bg-[#e6e1da] text-[#000000] font-Satoshi">
-            <MortCalculator />
-            <PurchaseCalculator />
+            <MortgagePayCalc />
         </main>
   )
 }
